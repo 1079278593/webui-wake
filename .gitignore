@@ -307,3 +307,11 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# Wake environment
+Wake/fresh_env/
+Wake/fresh_env/*
+
+__pycache__/
+*.py[cod]
+*$py.class
