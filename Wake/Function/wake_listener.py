@@ -32,7 +32,7 @@ load_dotenv()
 
 class WakeWordService:
     def __init__(self, listener_type="computer"):
-        self.wake_word = "小" 
+        self.wake_word = "小狗" 
         self.dismiss_words = ["退下", "退下吧"]
         self.logger = setup_logging()
         self.is_active = False  # 是否处于活跃状态（是否发送消息）

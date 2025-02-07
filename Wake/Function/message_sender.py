@@ -45,7 +45,9 @@ class MessageSender:
                 reconnection=True,
                 reconnection_attempts=3,
                 reconnection_delay=1,
-                http_session=None  # 使用默认的aiohttp session
+                http_session=None,  # 使用默认的aiohttp session
+                request_timeout=5,  # 减少请求超时时间
+                handle_sigint=False  # 不处理SIGINT信号
             )
             
             # 添加事件处理
@@ -69,9 +71,9 @@ class MessageSender:
             self.logger.info("正在连接到 Socket.IO 服务器...")
             await self.sio.connect(
                 url=self.base_url,
-                transports=['websocket'],  # 只使用websocket
-                socketio_path='socket.io',
-                wait_timeout=10,
+                transports=['polling'],  # 只使用polling模式
+                socketio_path='socket.io',  # 使用默认路径
+                wait_timeout=5,  # 减少等待超时时间
                 headers={
                     'Accept': '*/*',
                     'Accept-Encoding': 'gzip, deflate',

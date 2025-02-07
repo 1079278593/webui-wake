@@ -390,6 +390,17 @@
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
+		
+		// 添加语音输入事件处理
+		$socket?.on('chat-input', (data) => {
+			if (data.text) {
+				prompt = data.text;
+				const chatInput = document.getElementById('chat-input');
+				if (chatInput) {
+					chatInput.focus();
+				}
+			}
+		});
 
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {

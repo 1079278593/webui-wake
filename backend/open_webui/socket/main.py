@@ -15,6 +15,7 @@ from open_webui.env import (
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
+from open_webui.socket.voice_handler import VoiceHandler
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -71,6 +72,10 @@ else:
     USER_POOL = {}
     USAGE_POOL = {}
     aquire_func = release_func = renew_func = lambda: True
+
+
+# 初始化语音处理器
+voice_handler = VoiceHandler(sio)
 
 
 async def periodic_usage_pool_cleanup():
