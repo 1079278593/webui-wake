@@ -24,17 +24,22 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
+ENV NODE_OPTIONS="--max-old-space-size=4096" \
+    CYPRESS_INSTALL_BINARY=0
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# 安装依赖
+COPY package*.json ./
+RUN npm install @sveltejs/adapter-static@3.0.8 && \
+    npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.11-slim AS base
 
 # Use args
 ARG USE_CUDA
