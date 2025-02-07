@@ -77,7 +77,6 @@ class ComputerMicListener(VoiceListener):
         # 目前不需要特别的清理操作
         pass
 
-# 工厂函数
 def create_listener(listener_type: str = "computer", logger=None) -> VoiceListener:
     """
     创建语音监听器的工厂函数
