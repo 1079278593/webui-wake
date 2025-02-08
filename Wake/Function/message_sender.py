@@ -44,10 +44,7 @@ class MessageSender:
                 engineio_logger=self.logger,
                 reconnection=True,
                 reconnection_attempts=3,
-                reconnection_delay=1,
-                http_session=None,  # 使用默认的aiohttp session
-                request_timeout=5,  # 减少请求超时时间
-                handle_sigint=False  # 不处理SIGINT信号
+                reconnection_delay=1
             )
             
             # 添加事件处理
@@ -71,15 +68,10 @@ class MessageSender:
             self.logger.info("正在连接到 Socket.IO 服务器...")
             await self.sio.connect(
                 url=self.base_url,
-                transports=['polling'],  # 只使用polling模式
-                socketio_path='socket.io',  # 使用默认路径
-                wait_timeout=5,  # 减少等待超时时间
-                headers={
-                    'Accept': '*/*',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'User-Agent': 'python-socketio-client'
-                }
+                transports=['websocket'],  # 只使用 websocket
+                socketio_path='ws/socket.io',
+                wait_timeout=10,
+                namespaces=['/']  # 使用默认命名空间
             )
             
             # 等待连接确认
@@ -114,9 +106,9 @@ class MessageSender:
                     self.logger.error("无法建立 Socket.IO 连接")
                     return False
             
-            # 发送消息
+            # 发送实际识别到的文字
             self.logger.info(f"正在发送消息: {text}")
-            await self.sio.emit('voice-input', {'text': text})
+            await self.sio.emit('voice-input', {'text': text}, namespace='/')  # 改回 voice-input 并指定命名空间
             self.logger.info(f"消息发送成功：{text}")
             return True
             

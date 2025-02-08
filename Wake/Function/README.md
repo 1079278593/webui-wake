@@ -69,8 +69,9 @@ source fresh_env/bin/activate  # macOS/Linux
 # 或
 .\fresh_env\Scripts\activate   # Windows
 
-# 2. 运行程序
-python wake_listener.py
+# 2. 运行程序 (要用python3)
+python3 wake_listener.py
+（或者：python3 Function/wake_listener.py ）
 ```
 
 ## 为什么需要激活虚拟环境？

@@ -5,9 +5,10 @@ echo "------------------------"
 
 # 切换到指定目录
 cd /Users/imvt/Desktop/GitHub/OpenAI/OpenWebUI/webui-wake/Wake
+echo "cd /Users/imvt/Desktop/GitHub/OpenAI/OpenWebUI/webui-wake/Wake"
 
 # 激活虚拟环境
-echo "正在初始化环境..."
+echo "正在初始化环境...(source fresh_env/bin/activate)"
 source fresh_env/bin/activate
 
 # 运行程序

@@ -74,8 +74,15 @@ else:
     aquire_func = release_func = renew_func = lambda: True
 
 
+app = socketio.ASGIApp(
+    sio,
+    socketio_path="/ws/socket.io",
+)
+
 # 初始化语音处理器
+log.info("正在初始化语音处理器...")
 voice_handler = VoiceHandler(sio)
+log.info("语音处理器初始化完成")
 
 
 async def periodic_usage_pool_cleanup():
@@ -119,12 +126,6 @@ async def periodic_usage_pool_cleanup():
         release_func()
 
 
-app = socketio.ASGIApp(
-    sio,
-    socketio_path="/ws/socket.io",
-)
-
-
 def get_models_in_use():
     # List models that are currently in use
     models_in_use = list(USAGE_POOL.keys())
@@ -149,6 +150,7 @@ async def usage(sid, data):
 
 @sio.event
 async def connect(sid, environ, auth):
+    log.info(f"新的客户端连接: {sid}")
     user = None
     if auth and "token" in auth:
         data = decode_token(auth["token"])
