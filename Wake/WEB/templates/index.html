@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Deepseek Chat</h1>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- 消息将在这里动态添加 -->
+        </div>
+        <div class="chat-input-container">
+            <textarea id="user-input" placeholder="输入您的消息..." rows="1"></textarea>
+            <button id="send-button">发送</button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 
