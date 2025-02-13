@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>DeepSeek 1.5B 本地对话</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box; /* 确保padding不会增加总高度 */
+        }
+        #chat-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            max-height: calc(100vh - 40px); /* 减去body的padding */
+        }
+        #chat-history {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #ffffff;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            gap: 16px; /* 消息之间的间距 */
+        }
+       
+        /* 添加滚动提示 */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 8px;
+            font-size: 12px;
+            color: #bdbdbd;
+            background-color: #fafafa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+ 
+        #input-container {
+            display: flex;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #e0e0e0;
+            margin-top: auto;
+            position: relative;
+            background: white;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+            resize: none;
+            height: 24px;
+            line-height: 24px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        #user-input:focus {
+            border-color: #2962ff;
+            box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.1);
+        }
+        #send-btn {
+            padding: 12px 24px;
+            background-color: #2962ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 16px;
+            height: 50px;
+            white-space: nowrap;
+        }
+        #stop-btn {
+            display: none; /* 默认隐藏 */
+            padding: 12px 24px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            font-size: 16px;
+            height: 50px;
+            white-space: nowrap;
+        }
+        button:hover {
+            background-color: #1e4bd8;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* 自定义滚动条样式 */
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        #chat-history::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        /* 输入框滚动条样式 */
+        #user-input::-webkit-scrollbar {
+            width: 6px;
+        }
+        #user-input::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        #user-input::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        #user-input::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* 用户消息 */
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+            color: #2962ff;
+            border: 1px solid rgba(41, 98, 255, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* 助手回复 */
+        .assistant-message {
+            background-color: #ffffff;
+            margin-right: auto;
+            color: #202124;
+            border: 1px solid #e0e0e0;
+            padding: 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* 思考内容 */
+        .think-message {
+            background-color: #f8f8f8;
+            margin-right: auto;
+            color: #bdbdbd;
+            font-style: italic;
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #bdbdbd;
+            padding: 16px;
+            border-radius: 8px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* 代码块 */
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+            padding-top: 40px;
+        }
+
+        .code-block::before {
+            content: 'Code';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: #21252b;
+            border-radius: 6px 6px 0 0;
+            border-bottom: 1px solid #181a1f;
+            color: #6e7681;
+            font-size: 12px;
+            line-height: 30px;
+            padding: 0 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 思考状态 */
+        .thinking-state {
+            background-color: #fafafa;
+            margin-right: auto;
+            color: #9e9e9e;
+            font-style: italic;
+            border: 1px dashed #e0e0e0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 85%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        /* 消息组容器 */
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .normal-text {
+            color: #333;
+        }
+        .think-text {
+            color: #bdbdbd;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-history"></div>
+        <div id="input-container">
+            <textarea id="user-input" placeholder="输入消息，按Enter发送，Shift+Enter换行..." rows="1" autocomplete="off"></textarea>
+            <button id="send-btn" onclick="sendMessage()">发送</button>
+            <button id="stop-btn" onclick="stopGeneration()">停止</button>
+        </div>
+    </div>
+
+    <script>
+        let isGenerating = false;
+        let lastMessageId = null;
+        let currentController = null; // 用于中断请求的 AbortController
+
+        // 自动调整输入框高度
+        function adjustTextareaHeight(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // 监听输入框变化
+        document.getElementById('user-input').addEventListener('input', function() {
+            adjustTextareaHeight(this);
+        });
+
+        // 处理按键事件
+        document.getElementById('user-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isGenerating) {
+                    sendMessage();
+                }
+            }
+        });
+
+        function formatMessage(text) {
+            // 处理代码块
+            const codeRegex = /```([\s\S]*?)```/g;
+            let formattedText = text.replace(codeRegex, (match, code) => {
+                return `<div class="code-block">${code.trim()}</div>`;
+            });
+
+            // 处理换行
+            formattedText = formattedText.replace(/\n/g, '<br>');
+            
+            return formattedText;
+        }
+
+        // 中断生成
+        async function stopGeneration() {
+            if (currentController) {
+                currentController.abort();
+                currentController = null;
+            }
+            toggleInputState(false);
+            
+            // 记录中断事件
+            fetch('/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'interrupt',
+                    data: {
+                        timestamp: new Date().toISOString(),
+                        message: '用户中断了生成'
+                    }
+                })
+            }).catch(console.error);
+        }
+
+        async function sendMessage() {
+            if (isGenerating) return;
+
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // 添加用户消息
+            addMessage(message, 'user');
+            userInput.value = '';
+            
+            // 添加思考中的消息
+            lastMessageId = addMessage('正在思考...', 'thinking');
+            
+            // 禁用输入
+            toggleInputState(true);
+
+            try {
+                // 创建新的 AbortController
+                currentController = new AbortController();
+                const signal = currentController.signal;
+
+                const requestData = {
+                    model: 'MODEL_NAME_PLACEHOLDER',  // 这个值会被服务器端的设置覆盖
+                    prompt: message,
+                    stream: true,
+                    options: {
+                        temperature: 0.7,
+                        max_tokens: 500
+                    }
+                };
+
+                // 记录对话开始
+                fetch('/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'start',
+                        data: {
+                            timestamp: new Date().toISOString(),
+                            user_message: message
+                        }
+                    })
+                }).catch(console.error);
+
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData),
+                    signal // 添加中断信号
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+                        for (const line of lines) {
+                            try {
+                                const data = JSON.parse(line);
+                                fullResponse += data.response;
+                                updateLastMessage(fullResponse);
+                                
+                                // 记录每个响应块
+                                fetch('/log', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        type: 'stream',
+                                        data: {
+                                            timestamp: new Date().toISOString(),
+                                            content: data.response
+                                        }
+                                    })
+                                }).catch(console.error);
+                            } catch (e) {
+                                console.error('解析错误:', e);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        console.log('生成被用户中断');
+                        return;
+                    }
+                    throw error;
+                }
+
+                // 记录对话结束
+                fetch('/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'end',
+                        data: {
+                            timestamp: new Date().toISOString(),
+                            full_response: fullResponse
+                        }
+                    })
+                }).catch(console.error);
+
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('错误:', error);
+                    updateLastMessage(`请求失败: ${error.message}`);
+                    // 记录错误
+                    fetch('/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'error',
+                            error: error.message,
+                            timestamp: new Date().toISOString()
+                        })
+                    }).catch(console.error);
+                }
+            } finally {
+                currentController = null;
+                toggleInputState(false);
+                lastMessageId = null;
+            }
+        }
+
+        function addMessage(text, type) {
+            const chatHistory = document.getElementById('chat-history');
+            const messageDiv = document.createElement('div');
+            const messageId = 'msg-' + Date.now();
+            
+            messageDiv.id = messageId;
+            
+            switch (type) {
+                case 'thinking':
+                    messageDiv.className = 'thinking-state';
+                    messageDiv.textContent = text;
+                    break;
+                case 'user':
+                    messageDiv.className = 'user-message';
+                    messageDiv.innerHTML = text.replace(/\n/g, '<br>');
+                    break;
+                default:
+                    const formatted = formatMessage(text);
+                    messageDiv.className = 'message-container';
+                    messageDiv.innerHTML = formatted;
+            }
+            
+            chatHistory.appendChild(messageDiv);
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            
+            return messageId;
+        }
+
+        function updateLastMessage(content) {
+            if (!lastMessageId) return;
+            const messageDiv = document.getElementById(lastMessageId);
+            if (messageDiv) {
+                let formattedContent = '';
+                let isInThinkTag = false;
+                let currentText = '';
+                
+                // 遍历每个字符
+                for (let i = 0; i < content.length; i++) {
+                    if (content.slice(i).startsWith('<think>')) {
+                        // 如果之前有普通文本，先添加
+                        if (currentText) {
+                            formattedContent += `<span class="normal-text">${formatMessage(currentText)}</span>`;
+                            currentText = '';
+                        }
+                        isInThinkTag = true;
+                        i += 6; // 跳过 <think>
+                        continue;
+                    }
+                    if (content.slice(i).startsWith('</think>')) {
+                        // 如果有think内容，添加
+                        if (currentText) {
+                            formattedContent += `<span class="think-text">${formatMessage(currentText)}</span>`;
+                            currentText = '';
+                        }
+                        isInThinkTag = false;
+                        i += 7; // 跳过 </think>
+                        continue;
+                    }
+                    currentText += content[i];
+                }
+                
+                // 处理剩余的文本
+                if (currentText) {
+                    if (isInThinkTag) {
+                        formattedContent += `<span class="think-text">${formatMessage(currentText)}</span>`;
+                    } else {
+                        formattedContent += `<span class="normal-text">${formatMessage(currentText)}</span>`;
+                    }
+                }
+                
+                messageDiv.innerHTML = formattedContent;
+                
+                // 检查是否在底部附近
+                const chatHistory = document.getElementById('chat-history');
+                const isNearBottom = chatHistory.scrollHeight - chatHistory.scrollTop - chatHistory.clientHeight < 100;
+                
+                // 只有在接近底部时才自动滚动
+                if (isNearBottom) {
+                    messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }
+        }
+
+        function toggleInputState(disabled) {
+            const input = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            isGenerating = disabled;
+            input.disabled = disabled;
+            sendBtn.disabled = disabled;
+            sendBtn.style.display = disabled ? 'none' : 'block';
+            stopBtn.style.display = disabled ? 'block' : 'none';
+            
+            if (!disabled) {
+                sendBtn.innerHTML = '发送';
+            }
+        }
+
+        // 添加一个滚动到底部的按钮
+        const style = document.createElement('style');
+        style.textContent = `
+            #scroll-bottom-btn {
+                position: fixed;
+                right: calc(50% - 400px - 60px); /* 考虑到主容器宽度800px */
+                bottom: 30px;
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+                background-color: #2962ff;
+                color: white;
+                border: none;
+                cursor: pointer;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                transition: all 0.3s;
+                z-index: 1000;
+            }
+            #scroll-bottom-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+            #scroll-bottom-btn svg {
+                width: 20px;
+                height: 20px;
+                fill: currentColor;
+            }
+            @media (max-width: 920px) {
+                #scroll-bottom-btn {
+                    right: 20px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        const scrollButton = document.createElement('button');
+        scrollButton.id = 'scroll-bottom-btn';
+        scrollButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>';
+        document.body.appendChild(scrollButton);
+
+        // 监听聊天历史的滚动事件
+        const chatHistory = document.getElementById('chat-history');
+        chatHistory.addEventListener('scroll', function() {
+            const isNearBottom = this.scrollHeight - this.scrollTop - this.clientHeight < 100;
+            scrollButton.style.display = isNearBottom ? 'none' : 'flex';
+        });
+
+        // 点击按钮滚动到底部
+        scrollButton.addEventListener('click', function() {
+            const lastMessage = chatHistory.lastElementChild;
+            if (lastMessage) {
+                lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        });
+    </script>
+</body>
+</html>
