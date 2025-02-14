@@ -2,7 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>DeepSeek 1.5B 本地对话</title>
+    <title>AI 本地对话</title>
+    <script>
+        let isGenerating = false;
+        let lastMessageId = null;
+        let currentController = null;
+        let currentModel = null; // 添加全局变量存储模型名称
+
+        // 页面加载时获取模型名称
+        window.onload = async function() {
+            try {
+                const response = await fetch('/model');
+                const data = await response.json();
+                currentModel = data.model; // 保存模型名称
+                document.title = `${currentModel} 本地对话`;
+            } catch (error) {
+                console.error('获取模型名称失败:', error);
+            }
+        }
+    </script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -271,10 +289,6 @@
     </div>
 
     <script>
-        let isGenerating = false;
-        let lastMessageId = null;
-        let currentController = null; // 用于中断请求的 AbortController
-
         // 自动调整输入框高度
         function adjustTextareaHeight(textarea) {
             textarea.style.height = 'auto';
@@ -333,6 +347,10 @@
 
         async function sendMessage() {
             if (isGenerating) return;
+            if (!currentModel) {
+                console.error('模型名称未初始化');
+                return;
+            }
 
             const userInput = document.getElementById('user-input');
             const message = userInput.value.trim();
@@ -354,7 +372,7 @@
                 const signal = currentController.signal;
 
                 const requestData = {
-                    model: 'MODEL_NAME_PLACEHOLDER',  // 这个值会被服务器端的设置覆盖
+                    model: currentModel,  // 使用获取到的模型名称
                     prompt: message,
                     stream: true,
                     options: {

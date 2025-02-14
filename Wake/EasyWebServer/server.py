@@ -59,6 +59,14 @@ class CORSRequestHandler(LoggingRequestHandler):
 
     def do_GET(self):
         logger.debug(f"收到 GET 请求: {self.path}")
+        # 添加新的路由处理模型名称请求
+        if self.path == '/model':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            response = json.dumps({'model': OLLAMA_MODEL})
+            self.wfile.write(response.encode('utf-8'))
+            return
         # 如果请求根路径，重定向到chat.html
         if self.path == '/':
             self.path = '/chat.html'
@@ -75,8 +83,6 @@ class CORSRequestHandler(LoggingRequestHandler):
             try:
                 with open('chat.html', 'r', encoding='utf-8') as f:
                     content = f.read()
-                # 替换模型名称
-                content = content.replace('MODEL_NAME_PLACEHOLDER', OLLAMA_MODEL)
                 # 发送响应
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html; charset=utf-8')
