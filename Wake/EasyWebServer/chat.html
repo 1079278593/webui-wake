@@ -475,11 +475,16 @@
                     })
                 }).catch(console.error);
 
-                const response = await fetch('http://localhost:11434/api/generate', {
+                const response = await fetch('/api/generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Connection': 'keep-alive'
+                    },
                     body: JSON.stringify(requestData),
-                    signal // 添加中断信号
+                    signal,
+                    // 添加超时设置
+                    timeout: 30000
                 });
 
                 if (!response.ok) {

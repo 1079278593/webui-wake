@@ -6,6 +6,9 @@ import logging
 import json
 from datetime import datetime
 import sys
+import http.client
+import urllib.parse
+import shutil
 
 # 获取模型名称
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'deepseek-r1:1.5b')
@@ -94,12 +97,43 @@ class CORSRequestHandler(LoggingRequestHandler):
                 return SimpleHTTPRequestHandler.do_GET(self)
         return SimpleHTTPRequestHandler.do_GET(self)
 
+    def proxy_ollama_request(self, data):
+        """代理转发请求到Ollama服务器"""
+        try:
+            # 连接到本地Ollama服务器
+            conn = http.client.HTTPConnection("localhost", 11434)
+            headers = {'Content-Type': 'application/json'}
+            
+            # 发送请求
+            conn.request("POST", "/api/generate", data, headers)
+            
+            # 获取响应
+            response = conn.getresponse()
+            
+            # 设置响应头
+            self.send_response(response.status)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            # 直接转发响应数据
+            shutil.copyfileobj(response, self.wfile)
+            
+            conn.close()
+            
+        except Exception as e:
+            logger.error(f"代理请求失败: {e}")
+            self.send_error(500, f"代理请求失败: {str(e)}")
+
     def do_POST(self):
         """处理POST请求并记录数据"""
         logger.debug(f"收到 POST 请求: {self.path}")
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         
+        # 处理Ollama API请求
+        if self.path == '/api/generate':
+            return self.proxy_ollama_request(post_data)
+            
         try:
             # 尝试解析JSON数据
             json_data = json.loads(post_data.decode('utf-8'))
