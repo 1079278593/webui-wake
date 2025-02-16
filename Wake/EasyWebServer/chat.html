@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI 本地对话</title>
     <script>
         let isGenerating = false;
@@ -275,6 +276,86 @@
         .think-text {
             color: #bdbdbd;
             font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                height: 100vh;
+                height: -webkit-fill-available; /* 适配 iOS Safari */
+            }
+            
+            #chat-container {
+                padding: 10px;
+                max-height: 100vh;
+                max-height: -webkit-fill-available;
+            }
+            
+            #chat-history {
+                padding: 10px;
+                margin-bottom: 10px;
+                max-height: calc(100vh - 120px); /* 为输入区域预留足够空间 */
+            }
+            
+            #input-container {
+                padding: 8px;
+                gap: 8px;
+                position: sticky;
+                bottom: 0;
+                background: white;
+                border-radius: 0 0 10px 10px;
+                box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+            }
+            
+            #user-input {
+                padding: 8px 12px;
+                font-size: 16px;
+                min-height: 24px;
+                max-height: 100px; /* 限制在移动端的最大高度 */
+            }
+            
+            #send-btn, #stop-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+                height: 40px;
+                min-width: 60px; /* 确保按钮有最小宽度 */
+            }
+            
+            .code-block {
+                font-size: 12px;
+                padding: 8px 12px;
+                padding-top: 36px;
+                max-width: 100%;
+                overflow-x: auto;
+            }
+            
+            .code-block::before {
+                height: 28px;
+                line-height: 28px;
+                font-size: 11px;
+            }
+
+            /* 移动端滚动按钮样式调整 */
+            #scroll-bottom-btn {
+                right: 16px;
+                bottom: 80px; /* 确保不会被输入框遮挡 */
+                width: 36px;
+                height: 36px;
+                opacity: 0.9;
+            }
+        }
+
+        /* 添加安全区域适配 */
+        @supports(padding: max(0px)) {
+            body {
+                padding-left: max(10px, env(safe-area-inset-left));
+                padding-right: max(10px, env(safe-area-inset-right));
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+            }
+            
+            #input-container {
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>

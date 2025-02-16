@@ -146,11 +146,25 @@ class CORSRequestHandler(LoggingRequestHandler):
 class TCPServerReusableAddr(socketserver.TCPServer):
     allow_reuse_address = True  # 允许端口重用
 
+def get_local_ip():
+    """获取本机IP地址"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 def run_server(port):
     """运行服务器"""
     try:
-        with TCPServerReusableAddr(("", port), CORSRequestHandler) as httpd:
-            print(f"服务器运行在 http://localhost:{port}")
+        local_ip = get_local_ip()
+        with TCPServerReusableAddr(("0.0.0.0", port), CORSRequestHandler) as httpd:
+            print(f"服务器运行在:")
+            print(f"- 本地访问: http://localhost:{port}")
+            print(f"- 局域网访问: http://{local_ip}:{port}")
             print(f"使用模型: {OLLAMA_MODEL}")
             print("按 Ctrl+C 停止服务器")
             httpd.serve_forever()
