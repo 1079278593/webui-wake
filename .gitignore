@@ -312,6 +312,19 @@ cypress/screenshots
 Wake/fresh_env/
 Wake/fresh_env/*
 
+# iOS Project
+xcuserdata/
+DerivedData/
+build/
+Pods/
+*.ipa
+*.dSYM.zip
+*.dSYM
+.DS_Store
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcworkspace/xcshareddata/*.xccheckout
+*.xcworkspace/xcshareddata/*.xcscmblueprint
+
 __pycache__/
 *.py[cod]
 *$py.class
