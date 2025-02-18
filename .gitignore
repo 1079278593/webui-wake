@@ -309,8 +309,8 @@ cypress/screenshots
 .vscode/settings.json
 
 # Wake environment
-Wake/fresh_env/
-Wake/fresh_env/*
+Wake/FlaskWEBServer/fresh_env/
+Wake/FlaskWEBServer/fresh_env/*
 
 # iOS Project
 xcuserdata/

@@ -1,0 +1,12 @@
+
+
+
+1.PyAudio 实际上安装在了基础环境 /Users/imvt/miniconda3/lib/python3.12/site-packages 中
+2.而不是在虚拟环境 fresh_env 中
+
+这就解释了为什么：
+1 ./fresh_env/bin/python app.py 能工作 - 因为它继承了基础环境的包
+2. pip install -r requirements.txt 失败 - 因为它试图在虚拟环境中重新安装
+
+所以用setup.sh来安装，运行：
+./setup.sh  

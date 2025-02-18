@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentController = new AbortController();
 
             // 发送POST请求并接收流式响应
-            const response = await fetch('/chat', {
+            const response = await fetch(window.location.origin + '/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

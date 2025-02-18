@@ -1,9 +1,23 @@
 
+
 运行环境：
 source fresh_env/bin/activate
 
-运行python，用fresh_nev中的python，如下：
-./fresh_env/bin/python WEB/app.py
+安装依赖（激活环境后）：pip install -r requirements.txt
+
+两个项目：
+
+项目一（主项目）
+./fresh_env/bin/python app.py
+
+项目二（语音识别）
+./fresh_env/bin/python Function/wake_listener.py
+
+
+为什么要用‘./fresh_env/..’这种方式，因为PyAudio兼容性等问题。
+
+
+
 
 app.py中用到了’轻量级的 Python Web 应用框架‘： Flask
 
