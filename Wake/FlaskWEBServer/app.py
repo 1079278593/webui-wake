@@ -131,6 +131,9 @@ def chat():
     logger.info(f"收到聊天请求 - IP: {request.remote_addr}")
     logger.info(f"用户消息: {user_message}")
     
+    # 中断当前正在进行的请求
+    dialogue_manager.stop_current_request()
+    
     def generate():
         try:
             # 发送请求给Ollama
@@ -142,6 +145,7 @@ def chat():
             
             logger.info("正在发送请求到Ollama服务")
             response = requests.post(OLLAMA_API_URL, json=ollama_data, stream=True)
+            dialogue_manager.set_current_request(response)
             logger.info(f"Ollama响应状态码: {response.status_code}")
             
             if response.status_code == 200:
@@ -160,9 +164,13 @@ def chat():
                 yield f"data: {json.dumps({'error': 'Ollama服务响应失败'})}\n\n"
         except Exception as e:
             logger.error(f"发生异常: {str(e)}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            if str(e) == 'interrupted':
+                yield f"data: {json.dumps({'status': 'interrupted'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
         finally:
             logger.info("聊天响应完成")
+            dialogue_manager.set_current_request(None)
     
     return Response(stream_with_context(generate), mimetype='text/event-stream')
 
@@ -171,6 +179,7 @@ class DialogueManager:
         self.active_dialogues = {}
         self.max_dialogues = 3
         self.lock = threading.Lock()
+        self.current_request = None  # 当前正在进行的请求
 
     def create_dialogue(self):
         with self.lock:
@@ -190,7 +199,7 @@ class DialogueManager:
             dialogue_id = str(uuid.uuid4())
             self.active_dialogues[dialogue_id] = {
                 'status': 'active',
-                'controller': None,
+                'request': None,
                 'response_queue': Queue()
             }
             return dialogue_id
@@ -211,6 +220,25 @@ class DialogueManager:
     def complete_dialogue(self, dialogue_id):
         if dialogue_id in self.active_dialogues:
             self.active_dialogues[dialogue_id]['status'] = 'completed'
+
+    def set_current_request(self, request):
+        with self.lock:
+            if self.current_request:
+                self.stop_current_request()
+            self.current_request = request
+
+    def stop_current_request(self):
+        with self.lock:
+            if self.current_request:
+                try:
+                    # 发送中断请求到 Ollama
+                    requests.delete(OLLAMA_API_URL)
+                    logger.info("已发送中断请求到 Ollama")
+                    # 发送中断标记
+                    yield f"data: {json.dumps({'status': 'interrupted'})}\n\n"
+                except Exception as e:
+                    logger.error(f"中断 Ollama 请求时出错: {str(e)}")
+                self.current_request = None
 
 dialogue_manager = DialogueManager()
 

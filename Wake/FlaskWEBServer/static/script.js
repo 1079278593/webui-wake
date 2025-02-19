@@ -210,6 +210,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 thinkingContent.remove();
                                 cleanup();
                                 return;
+                            } else if (data.status === 'interrupted') {
+                                // 被中断时，保留已显示的内容，只添加中断标记
+                                if (answerContent.textContent) {
+                                    answerContent.textContent += ' [已中断]';
+                                }
+                                thinkingContent.remove();
+                                cleanup();
+                                return;
                             } else if (data.done) {
                                 cleanup();
                                 return;
@@ -250,6 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             if (error.name === 'AbortError') {
                 console.log('请求被中断');
+                if (answerContent.textContent) {
+                    answerContent.textContent += ' [已中断]';
+                }
             } else {
                 console.error('发送消息失败:', error);
                 answerContent.textContent = '发送消息失败，请重试。';
