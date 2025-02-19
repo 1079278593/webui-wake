@@ -2,7 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chat-messages');
     const userInput = document.getElementById('user-input');
     const sendButton = document.getElementById('send-button');
-    let currentController = null;  // 用于存储当前的 AbortController
+    const voiceButton = document.getElementById('voice-button');
+    let currentController = null;
+    let isRecording = false;
+    let currentDialogueId = null;
+    let currentEventSource = null;
 
     // 设置输入状态
     function setInputState(enabled) {
@@ -17,6 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 设置语音按钮状态
+    function setVoiceButtonState(recording) {
+        isRecording = recording;
+        if (recording) {
+            voiceButton.classList.add('recording');
+            voiceButton.textContent = '正在录音...';
+        } else {
+            voiceButton.classList.remove('recording');
+            voiceButton.textContent = '对话';
+        }
+    }
+
     // 清理当前请求
     function cleanup() {
         if (currentController) {
@@ -26,13 +42,92 @@ document.addEventListener('DOMContentLoaded', () => {
         setInputState(true);
     }
 
-    // 页面卸载时清理
-    window.addEventListener('beforeunload', cleanup);
+    // 开始语音识别
+    async function startVoiceRecognition() {
+        if (isRecording) {
+            await stopVoiceRecognition();
+            return;
+        }
+
+        try {
+            setVoiceButtonState(true);
+            const response = await fetch('/start_voice', {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            if (data.error) {
+                console.error('语音识别错误:', data.error);
+                setVoiceButtonState(false);
+                return;
+            }
+
+            currentDialogueId = data.dialogue_id;
+            console.log('开始语音识别，对话ID:', currentDialogueId);
+            
+            // 关闭已存在的事件源
+            if (currentEventSource) {
+                currentEventSource.close();
+            }
+            
+            // 创建新的事件源
+            currentEventSource = new EventSource('/voice_events');
+            
+            currentEventSource.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                console.log('收到语音事件:', data);
+                
+                if (data.type === 'keepalive') {
+                    // 忽略保持活动信号
+                    return;
+                }
+                
+                if (data.status === 'success' && data.text) {
+                    console.log('收到语音识别文本:', data.text);
+                    await sendMessage(data.text);
+                } else if (data.status === 'error') {
+                    console.error('语音识别错误:', data.error);
+                    setVoiceButtonState(false);
+                    currentEventSource.close();
+                    currentEventSource = null;
+                }
+            };
+            
+            currentEventSource.onerror = (error) => {
+                console.error('语音事件流错误:', error);
+                setVoiceButtonState(false);
+                if (currentEventSource) {
+                    currentEventSource.close();
+                    currentEventSource = null;
+                }
+            };
+        } catch (error) {
+            console.error('启动语音识别失败:', error);
+            setVoiceButtonState(false);
+        }
+    }
+
+    // 停止语音识别
+    async function stopVoiceRecognition() {
+        try {
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+            
+            await fetch('/stop_voice', {
+                method: 'POST'
+            });
+            setVoiceButtonState(false);
+        } catch (error) {
+            console.error('停止语音识别失败:', error);
+        }
+    }
 
     // 处理发送消息
-    async function sendMessage() {
-        const message = userInput.value.trim();
-        if (!message) return;
+    async function sendMessage(message = null) {
+        const messageText = message || userInput.value.trim();
+        if (!messageText) return;
 
         // 如果有正在进行的请求，先中断它
         cleanup();
@@ -45,18 +140,20 @@ document.addEventListener('DOMContentLoaded', () => {
         userMessageDiv.className = 'message user-message';
         const userContent = document.createElement('div');
         userContent.className = 'message-content';
-        userContent.textContent = message;
+        userContent.textContent = messageText;
         userMessageDiv.appendChild(userContent);
         chatMessages.appendChild(userMessageDiv);
         
-        // 清空输入框
-        userInput.value = '';
+        // 只有当消息来自输入框时才清空
+        if (!message) {
+            userInput.value = '';
+        }
 
         // 创建AI消息容器
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'message ai-message';
         
-        // 创建思考过程容器（初始不添加到DOM）
+        // 创建思考过程容器
         const thinkingContent = document.createElement('div');
         thinkingContent.className = 'message-content thinking';
         thinkingContent.style.display = 'none';
@@ -65,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const answerContent = document.createElement('div');
         answerContent.className = 'message-content answer';
         aiMessageDiv.appendChild(answerContent);
-        
         chatMessages.appendChild(aiMessageDiv);
 
         try {
@@ -73,12 +169,15 @@ document.addEventListener('DOMContentLoaded', () => {
             currentController = new AbortController();
 
             // 发送POST请求并接收流式响应
-            const response = await fetch(window.location.origin + '/chat', {
+            const response = await fetch('/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: message }),
+                body: JSON.stringify({ 
+                    message: messageText,
+                    dialogue_id: currentDialogueId
+                }),
                 signal: currentController.signal
             });
 
@@ -90,9 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             while (true) {
                 const {done, value} = await reader.read();
-                
                 if (done) {
-                    // 如果结束时没有思考内容，确保思考容器不显示
                     if (!hasThinkingContent) {
                         thinkingContent.remove();
                     }
@@ -119,17 +216,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else if (data.response) {
                                 const text = data.response;
                                 
-                                // 检测是否在思考过程中
                                 if (text.includes('<think>')) {
                                     isThinking = true;
-                                    // 只在第一次遇到思考内容时添加容器
                                     if (!hasThinkingContent) {
                                         aiMessageDiv.insertBefore(thinkingContent, answerContent);
                                         thinkingContent.style.display = 'block';
                                     }
                                 } else if (text.includes('</think>')) {
                                     isThinking = false;
-                                    // 清空思考内容，准备显示答案
                                     const cleanedThinkingText = thinkingContent.textContent.replace(/<\/?think>/g, '').trim();
                                     if (cleanedThinkingText) {
                                         hasThinkingContent = true;
@@ -157,22 +251,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error.name === 'AbortError') {
                 console.log('请求被中断');
             } else {
-                console.error('请求出错:', error);
-                answerContent.textContent = '抱歉，发生了一个错误，请稍后重试。';
-                thinkingContent.remove();
+                console.error('发送消息失败:', error);
+                answerContent.textContent = '发送消息失败，请重试。';
             }
+        } finally {
             cleanup();
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
-        // 滚动到底部
-        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     // 事件监听器
-    sendButton.addEventListener('click', sendMessage);
+    sendButton.addEventListener('click', () => sendMessage());
+    voiceButton.addEventListener('click', startVoiceRecognition);
     
     userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !userInput.disabled) {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
@@ -182,5 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
     userInput.addEventListener('input', () => {
         userInput.style.height = 'auto';
         userInput.style.height = Math.min(userInput.scrollHeight, 150) + 'px';
+    });
+
+    // 页面卸载时清理
+    window.addEventListener('beforeunload', () => {
+        cleanup();
+        stopVoiceRecognition();
     });
 }); 

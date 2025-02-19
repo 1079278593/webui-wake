@@ -9,7 +9,7 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>Deepseek Chat</h1>
+            <h1>My DS</h1>
         </div>
         <div class="chat-messages" id="chat-messages">
             <!-- 消息将在这里动态添加 -->
@@ -17,6 +17,7 @@
         <div class="chat-input-container">
             <textarea id="user-input" placeholder="输入您的消息..." rows="1"></textarea>
             <button id="send-button">发送</button>
+            <button id="voice-button" class="voice-button">对话</button>
         </div>
     </div>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
