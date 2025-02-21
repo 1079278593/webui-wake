@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 chatMessages.scrollTop = chatMessages.scrollHeight;
                             }
                         } catch (e) {
-                            console.error('解析响应时出错:', e);
+                            console.error('解析响应时出错:', e, '原始数据:', line);
                         }
                     }
                 }

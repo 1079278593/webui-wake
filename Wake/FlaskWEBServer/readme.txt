@@ -5,16 +5,12 @@ source fresh_env/bin/activate
 
 安装依赖（激活环境后）：pip install -r requirements.txt
 
-两个项目：
 
-项目一（主项目）
+下面这个方式是绝对导入
 ./fresh_env/bin/python app.py
-
-项目二（语音识别）
-./fresh_env/bin/python Function/wake_listener.py
+（为什么要用‘./fresh_env/..’这种方式，因为PyAudio兼容性等问题。）
 
 
-为什么要用‘./fresh_env/..’这种方式，因为PyAudio兼容性等问题。
 
 
 
